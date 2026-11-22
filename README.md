@@ -2,6 +2,7 @@
 
 > **Live Deployment:** [https://mockroom.app.space](https://mockroom.app.space)  
 > **Source Repository:** [https://github.com/Barun-Chhetri/mockroom](https://github.com/Barun-Chhetri/mockroom)  
+> **Author:** Barun Ranjan Chhetri Chamlagain  
 > **Stack:** DeepSpace SDK · Cloudflare Workers · Durable Objects · Yjs CRDT · React 18 · TypeScript · Tailwind CSS
 
 ---
