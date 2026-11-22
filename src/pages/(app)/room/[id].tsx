@@ -43,6 +43,7 @@ import {
 } from '@/components/ui'
 import type { RoomRecord } from '@/schemas/rooms-schema'
 import { LANGUAGE_STARTERS, type SupportedLanguage } from '@/lib/room-helpers'
+import { InterviewRightPanel } from './interview-right-panel'
 
 export default function InterviewRoomPage() {
   const { id } = useParams<{ id: string }>()
@@ -550,29 +551,4 @@ function StatusBadge({ status }: { status: RoomRecord['status'] }) {
   )
 }
 
-/** Right Panel container for Phase 2/3 */
-function InterviewRightPanel({
-  roomId,
-  room,
-  currentCode,
-}: {
-  roomId: string
-  room: RoomRecord
-  currentCode: string
-}) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="border-b border-border p-3 bg-muted/30">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-            Interviewer Workspace (Private)
-          </h2>
-        </div>
-      </div>
-      <div className="flex-1 p-4 overflow-y-auto text-xs text-muted-foreground">
-        <p>Interviewer panel ready for Phase 3: Private Notes & Rubric, R2 Attachments, and AI Copilot.</p>
-      </div>
-    </div>
-  )
-}
+
