@@ -61,8 +61,9 @@ flowchart TD
 
 ### Protocol-Level Safeguards
 1. **`userBound: true` & `immutable: true`:** Every schema `ownerField` is pinned to the caller's verified JWT userId at the platform layer. Clients cannot forge or mutate ownership.
-2. **WebSocket Role Downgrade on Completion:** In `src/server/realtime-routes.ts`, `resolveYjsRole` resolves candidate sessions to `'viewer'` once the room status is set to `completed`. Even if a candidate manipulates client DOM or issues raw Yjs WebSocket packets, the Durable Object ignores incoming edits.
-3. **AI Copilot Server Checks:** All three copilot routes (`/api/rooms/:id/ai/hint`, `/follow-up`, `/scorecard`) verify `auth.userId === room.interviewerId` and immediately reject unauthorized requests with `403 Forbidden`.
+2. **Authenticated Default Role Support:** Newly registered users receive the `'member'` default role (`defaultRole: 'member'` on `usersSchema`). In addition, both `'viewer'` and `'member'` roles grant room creation and private record ownership (`read: 'own'`, `create: true`, `update: 'own'`), enabling any signed-in user to host rooms seamlessly while preserving complete isolation against candidate inspection.
+3. **WebSocket Role Downgrade on Completion:** In `src/server/realtime-routes.ts`, `resolveYjsRole` resolves candidate sessions to `'viewer'` once the room status is set to `completed`. Even if a candidate manipulates client DOM or issues raw Yjs WebSocket packets, the Durable Object ignores incoming edits.
+4. **AI Copilot Server Checks:** All three copilot routes (`/api/rooms/:id/ai/hint`, `/follow-up`, `/scorecard`) verify `auth.userId === room.interviewerId` and immediately reject unauthorized requests with `403 Forbidden`.
 
 ---
 

@@ -63,7 +63,7 @@ export const roomsSchema: CollectionSchema = {
   permissions: {
     admin: { read: true, create: true, update: true, delete: true },
     member: { read: 'shared', create: true, update: 'shared', delete: 'own' },
-    viewer: { read: false, create: false, update: false, delete: false },
+    viewer: { read: 'shared', create: true, update: 'shared', delete: 'own' },
     '*': { read: false, create: false, update: false, delete: false },
   },
 }

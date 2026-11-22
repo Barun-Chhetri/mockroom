@@ -3,6 +3,7 @@ import { USERS_COLUMNS, type CollectionSchema } from 'deepspace/schema'
 export const usersSchema: CollectionSchema = {
   name: 'users',
   columns: [...USERS_COLUMNS],
+  defaultRole: 'member',
   permissions: {
     viewer: { read: 'own', create: false, update: 'own', delete: false },
     member: { read: 'own', create: false, update: 'own', delete: false },

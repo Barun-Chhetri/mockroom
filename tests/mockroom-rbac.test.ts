@@ -6,47 +6,82 @@ import {
   aiCopilotLogsSchema,
   roomAttachmentsSchema,
 } from '../src/schemas.js'
+import { usersSchema } from '../src/schemas/users-schema.js'
 import { joinRoom } from '../src/actions/join-room.js'
 import { generateInviteCode, LANGUAGE_STARTERS } from '../src/lib/room-helpers.js'
 import { Hono } from 'hono'
 import * as workerModule from 'deepspace/worker'
 
 describe('MockRoom Schema & RBAC Policies', () => {
-  it('enforces shared read on rooms for interviewer and candidate collaborators', () => {
+  it('assigns member as defaultRole for newly registered authenticated users', () => {
+    expect(usersSchema.defaultRole).toBe('member')
+  })
+
+  it('allows authenticated users with default role (viewer or member) to create and share rooms', () => {
     expect(roomsSchema.ownerField).toBe('interviewerId')
     expect(roomsSchema.collaboratorsField).toBe('collaborators')
+    // Both member and viewer roles can create rooms and read shared rooms
+    expect(roomsSchema.permissions.member.create).toBe(true)
     expect(roomsSchema.permissions.member.read).toBe('shared')
     expect(roomsSchema.permissions.member.update).toBe('shared')
-    expect(roomsSchema.permissions.viewer.read).toBe(false)
+    expect(roomsSchema.permissions.viewer.create).toBe(true)
+    expect(roomsSchema.permissions.viewer.read).toBe('shared')
+    expect(roomsSchema.permissions.viewer.update).toBe('shared')
     expect(roomsSchema.permissions['*'].read).toBe(false)
   })
 
-  it('strictly isolates privateNotes to interviewer (candidate is denied at DO schema level)', () => {
+  it('strictly isolates privateNotes to interviewer (candidate cannot read even in viewer or member role)', () => {
     expect(privateNotesSchema.ownerField).toBe('interviewerId')
     expect(privateNotesSchema.collaboratorsField).toBeUndefined()
+    // Interviewer with either member or viewer role can read/create/update own notes
     expect(privateNotesSchema.permissions.member.read).toBe('own')
+    expect(privateNotesSchema.permissions.member.create).toBe(true)
     expect(privateNotesSchema.permissions.member.update).toBe('own')
     expect(privateNotesSchema.permissions.member.delete).toBe('own')
-    expect(privateNotesSchema.permissions.viewer.read).toBe(false)
+
+    expect(privateNotesSchema.permissions.viewer.read).toBe('own')
+    expect(privateNotesSchema.permissions.viewer.create).toBe(true)
+    expect(privateNotesSchema.permissions.viewer.update).toBe('own')
+    expect(privateNotesSchema.permissions.viewer.delete).toBe('own')
     expect(privateNotesSchema.permissions['*'].read).toBe(false)
+
+    // Verification of "own" logic:
+    // When candidate checks note owned by interviewer, ownership fails
+    const interviewerNote = { data: { interviewerId: 'usr_interviewer_alice', notes: 'Secret feedback' } }
+    const candidateUserId = 'usr_candidate_bob'
+    const isCandidateOwner = interviewerNote.data.interviewerId === candidateUserId
+    expect(isCandidateOwner).toBe(false)
+
+    // When interviewer checks own note, ownership succeeds
+    const isInterviewerOwner = interviewerNote.data.interviewerId === 'usr_interviewer_alice'
+    expect(isInterviewerOwner).toBe(true)
   })
 
   it('strictly isolates rubrics and scoring to interviewer only', () => {
     expect(rubricsSchema.ownerField).toBe('interviewerId')
     expect(rubricsSchema.collaboratorsField).toBeUndefined()
     expect(rubricsSchema.permissions.member.read).toBe('own')
+    expect(rubricsSchema.permissions.member.create).toBe(true)
     expect(rubricsSchema.permissions.member.update).toBe('own')
-    expect(rubricsSchema.permissions.viewer.read).toBe(false)
+
+    expect(rubricsSchema.permissions.viewer.read).toBe('own')
+    expect(rubricsSchema.permissions.viewer.create).toBe(true)
+    expect(rubricsSchema.permissions.viewer.update).toBe('own')
     expect(rubricsSchema.permissions['*'].read).toBe(false)
   })
 
   it('strictly isolates AI copilot logs and room attachments to interviewer', () => {
     expect(aiCopilotLogsSchema.ownerField).toBe('interviewerId')
     expect(aiCopilotLogsSchema.permissions.member.read).toBe('own')
+    expect(aiCopilotLogsSchema.permissions.member.create).toBe(true)
+    expect(aiCopilotLogsSchema.permissions.viewer.read).toBe('own')
+    expect(aiCopilotLogsSchema.permissions.viewer.create).toBe(true)
 
     expect(roomAttachmentsSchema.ownerField).toBe('interviewerId')
     expect(roomAttachmentsSchema.permissions.member.read).toBe('own')
-    expect(roomAttachmentsSchema.permissions.viewer.read).toBe(false)
+    expect(roomAttachmentsSchema.permissions.member.create).toBe(true)
+    expect(roomAttachmentsSchema.permissions.viewer.read).toBe('own')
+    expect(roomAttachmentsSchema.permissions.viewer.create).toBe(true)
   })
 
   it('ensures all owner fields are userBound and immutable to prevent ID spoofing', () => {

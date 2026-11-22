@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuthProfileReady, useQuery, useMutations } from 'deepspace'
+import { useAuthProfileReady, useQuery, useMutations, AuthOverlay } from 'deepspace'
 import {
   Code2,
   Plus,
@@ -28,13 +28,22 @@ export default function HomePage() {
 
   const { createConfirmed } = useMutations<RoomRecord>('rooms')
 
-  // Room Creation Modal / State
+  // Room Creation Modal & Auth Modal State
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [title, setTitle] = useState('')
   const [language, setLanguage] = useState<SupportedLanguage>('typescript')
   const [problemStatement, setProblemStatement] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
+  const handleOpenCreateModal = () => {
+    if (!isSignedIn) {
+      setShowAuthModal(true)
+      return
+    }
+    setShowCreateModal(true)
+  }
 
   // Filter rooms by interviewer vs candidate
   const currentUserId = user?.id ?? ''
@@ -106,16 +115,30 @@ export default function HomePage() {
           </p>
         </div>
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={handleOpenCreateModal}
           className="inline-flex items-center gap-2 shadow-sm"
         >
           <Plus className="h-4 w-4" />
-          Create Interview Room
+          {isSignedIn ? 'Create Interview Room' : 'Sign in to Create Room'}
         </Button>
       </div>
 
       {/* Main Content */}
       <div className="mt-8 grid gap-8">
+        {!isSignedIn && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Sign in to Host Interviews</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                You are currently viewing as a guest. Sign in to create your own interview rooms and access AI copilot scoring.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setShowAuthModal(true)} className="shrink-0">
+              Sign In to Create Room
+            </Button>
+          </div>
+        )}
+
         {/* Interviewer Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -130,18 +153,22 @@ export default function HomePage() {
           {interviewerRooms.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
               <Code2 className="mx-auto h-10 w-10 text-muted-foreground/60" />
-              <h3 className="mt-3 text-sm font-medium text-foreground">No interview rooms yet</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Create your first mock interview room and share the candidate invite link.
+              <h3 className="mt-3 text-sm font-medium text-foreground">
+                {isSignedIn ? 'No interview rooms yet' : 'Sign in to create an interview room'}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+                {isSignedIn
+                  ? 'Create your first mock interview room and share the candidate invite link.'
+                  : 'Sign in to generate real-time collaborative rooms, evaluate candidates, and run AI scorecards.'}
               </p>
               <Button
-                variant="outline"
+                variant={isSignedIn ? 'outline' : 'default'}
                 size="sm"
                 className="mt-4 inline-flex items-center gap-1.5"
-                onClick={() => setShowCreateModal(true)}
+                onClick={handleOpenCreateModal}
               >
                 <Plus className="h-3.5 w-3.5" />
-                New Room
+                {isSignedIn ? 'New Room' : 'Sign in to Create Room'}
               </Button>
             </div>
           ) : (
@@ -334,6 +361,9 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* DeepSpace Auth Modal for Guests */}
+      {showAuthModal && <AuthOverlay onClose={() => setShowAuthModal(false)} />}
     </div>
   )
 }
