@@ -1,3 +1,9 @@
+/**
+ * Room Attachments Schema
+ *
+ * Why: Attachment metadata is scoped to the room and interviewer (`ownerField: 'interviewerId'`).
+ * Ensures resumes and architecture diagrams are protected from unauthorized deletion or tampering.
+ */
 import type { CollectionSchema } from 'deepspace/schema'
 
 export interface RoomAttachmentRecord {

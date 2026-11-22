@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useAuthProfileReady, useAuth, AuthOverlay, getAuthToken } from 'deepspace'
+import { useAuthProfileReady, AuthOverlay, getAuthToken } from 'deepspace'
 import { Code2, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import type { JoinRoomResult } from '@/actions/join-room'

@@ -1,3 +1,11 @@
+/**
+ * Private Notes Schema
+ *
+ * Why: Private notes are strictly owned by the interviewer (`ownerField: 'interviewerId'`).
+ * With `userBound: true` and `permissions.member: { read: 'own' }`, non-interviewer callers
+ * (including candidates) receive zero rows or 403 at the RecordRoom Durable Object layer,
+ * ensuring notes never cross the network boundary to unauthorized clients.
+ */
 import type { CollectionSchema } from 'deepspace/schema'
 
 export interface PrivateNoteRecord {

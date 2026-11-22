@@ -1,3 +1,10 @@
+/**
+ * Rubrics Schema
+ *
+ * Why: Structured rubrics and final hiring recommendations are strictly private to the interviewer.
+ * Platform-enforced at the RecordRoom Durable Object layer with `ownerField: 'interviewerId'`
+ * and `userBound: true` so candidates cannot view or tamper with scores.
+ */
 import type { CollectionSchema } from 'deepspace/schema'
 
 export interface RubricRecord {

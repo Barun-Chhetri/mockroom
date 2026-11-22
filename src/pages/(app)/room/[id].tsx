@@ -9,41 +9,27 @@ import {
 } from 'deepspace'
 import {
   Code2,
-  Users,
   Copy,
   Check,
-  Play,
   Lock,
   ChevronDown,
   ChevronUp,
-  Sparkles,
-  FileText,
-  Paperclip,
   CheckCircle2,
   Clock,
   AlertCircle,
-  HelpCircle,
-  Lightbulb,
-  FileQuestion,
-  Award,
   Loader2,
   ArrowLeft,
-  Settings,
 } from 'lucide-react'
 import {
   Button,
   Input,
   Textarea,
   Badge,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
   useToast,
 } from '@/components/ui'
 import type { RoomRecord } from '@/schemas/rooms-schema'
 import { LANGUAGE_STARTERS, type SupportedLanguage } from '@/lib/room-helpers'
-import { InterviewRightPanel } from './interview-right-panel'
+import { InterviewRightPanel } from '@/components/room/InterviewRightPanel'
 
 export default function InterviewRoomPage() {
   const { id } = useParams<{ id: string }>()

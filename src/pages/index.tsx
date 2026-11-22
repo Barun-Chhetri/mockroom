@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { seo } from '../seo'
-import { Code2, Sparkles, ShieldCheck, Users, ArrowRight, CheckCircle2 } from 'lucide-react'
+import { Code2, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react'
 
 export default function Landing() {
   return (

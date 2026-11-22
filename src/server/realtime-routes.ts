@@ -76,25 +76,31 @@ async function getRoomForAccess(env: Env, roomId: string): Promise<RoomRecord | 
   }
 }
 
+/**
+ * Resolves the authenticated user's authorization role for a Yjs CRDT document.
+ *
+ * Why: Role resolution is enforced at the WebSocket connection handshake:
+ * 1. Interviewer/Owner gets 'admin' (full read/write and management rights).
+ * 2. Candidate gets 'member' (read/write collaborative editing) while the room is 'waiting' or 'active'.
+ * 3. Once room status transitions to 'completed', candidate is downgraded to 'viewer' (strictly read-only
+ *    at the CRDT protocol layer, preventing WebSocket tampering regardless of client UI state).
+ * 4. Non-participants return null, causing the WebSocket upgrade to reject with 403 Forbidden.
+ */
 async function resolveYjsRole(
   env: Env,
   docId: string,
   userId: string,
 ): Promise<YjsRole | null> {
-  // First check if this docId maps to an interview room
   const room = await getRoomForAccess(env, docId)
   if (room) {
-    // Interviewer or platform owner is admin
     if (room.interviewerId === userId || userId === env.OWNER_USER_ID) {
       return 'admin'
     }
 
-    // Candidate role: editable when waiting or active, strictly read-only (viewer) when completed
     if (room.candidateId === userId) {
       return room.status === 'completed' ? 'viewer' : 'member'
     }
 
-    // Check collaborators list
     let collaborators: string[] = []
     try {
       collaborators = JSON.parse(String(room.collaborators || '[]'))
@@ -108,7 +114,6 @@ async function resolveYjsRole(
     return null
   }
 
-  // Fallback for default documents
   return 'member'
 }
 

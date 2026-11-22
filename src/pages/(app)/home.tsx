@@ -6,15 +6,12 @@ import {
   Plus,
   Copy,
   Check,
-  Play,
   Clock,
   CheckCircle2,
-  Sparkles,
   Users,
   ChevronRight,
-  ExternalLink,
 } from 'lucide-react'
-import { Button, Input, Textarea, Select, Badge, useToast } from '@/components/ui'
+import { Button, Input, Textarea, Badge, useToast } from '@/components/ui'
 import type { RoomRecord } from '@/schemas/rooms-schema'
 import { LANGUAGE_STARTERS, generateInviteCode, type SupportedLanguage } from '@/lib/room-helpers'
 

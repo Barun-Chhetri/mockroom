@@ -13,3 +13,12 @@ src/router.ts
 src/modals.tsx
 .claude/launch.json
 .claude/worktrees
+
+# Local environment, OS & database files
+.DS_Store
+*.local
+.env
+.env.*
+.cache/
+*.log
+.sqlite*

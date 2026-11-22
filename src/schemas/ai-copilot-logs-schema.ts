@@ -1,3 +1,9 @@
+/**
+ * AI Copilot Logs Schema
+ *
+ * Why: AI Copilot prompts, responses, and scorecards are interviewer-private records.
+ * Secured with `ownerField: 'interviewerId'` and `userBound: true` to prevent leakage to candidates.
+ */
 import type { CollectionSchema } from 'deepspace/schema'
 
 export interface AiCopilotLogRecord {
