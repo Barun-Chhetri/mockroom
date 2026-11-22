@@ -59,3 +59,41 @@ export function generateInviteCode(length = 8): string {
   }
   return result
 }
+
+/**
+ * Extracts a candidate invite code from either a raw code string
+ * or a full invite URL (e.g. https://mockroom.app.space/join/ABC12345).
+ */
+export function parseInviteCode(input: string): string | null {
+  if (!input) return null
+  const trimmed = input.trim()
+  if (!trimmed) return null
+
+  // 1. Match /join/<code...> anywhere in the URL or path
+  const joinMatch = trimmed.match(/(?:\/|^)join\/([A-Za-z0-9_-]+)/i)
+  if (joinMatch && joinMatch[1]) {
+    return joinMatch[1].trim()
+  }
+
+  // 2. If it's a URL or path with a trailing segment
+  if (trimmed.includes('/') || trimmed.startsWith('http')) {
+    try {
+      const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+      const segments = url.pathname.split('/').filter(Boolean)
+      const last = segments[segments.length - 1]
+      if (last && /^[A-Za-z0-9_-]{4,32}$/.test(last)) {
+        return last.trim()
+      }
+    } catch {
+      // Fall through to raw match
+    }
+  }
+
+  // 3. Raw invite code (alphanumeric or hyphen/underscore, 4-32 characters)
+  const codeMatch = trimmed.match(/^[A-Za-z0-9_-]{4,32}$/)
+  if (codeMatch) {
+    return codeMatch[0].trim()
+  }
+
+  return null
+}

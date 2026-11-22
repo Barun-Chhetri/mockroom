@@ -8,7 +8,7 @@ import {
 } from '../src/schemas.js'
 import { usersSchema } from '../src/schemas/users-schema.js'
 import { joinRoom } from '../src/actions/join-room.js'
-import { generateInviteCode, LANGUAGE_STARTERS } from '../src/lib/room-helpers.js'
+import { generateInviteCode, parseInviteCode, LANGUAGE_STARTERS } from '../src/lib/room-helpers.js'
 import { Hono } from 'hono'
 import * as workerModule from 'deepspace/worker'
 
@@ -102,6 +102,19 @@ describe('MockRoom Schema & RBAC Policies', () => {
 })
 
 describe('MockRoom Server Actions & Multi-User Flow', () => {
+  it('correctly extracts invite codes from raw codes, paths, and URLs', () => {
+    expect(parseInviteCode('TEST1234')).toBe('TEST1234')
+    expect(parseInviteCode('  TEST1234  ')).toBe('TEST1234')
+    expect(parseInviteCode('https://mockroom.app.space/join/TEST1234')).toBe('TEST1234')
+    expect(parseInviteCode('http://localhost:5173/join/TEST1234')).toBe('TEST1234')
+    expect(parseInviteCode('/join/TEST1234')).toBe('TEST1234')
+    expect(parseInviteCode('mockroom.app.space/join/TEST1234')).toBe('TEST1234')
+    expect(parseInviteCode('https://mockroom.app.space/join/TEST1234?candidate=true')).toBe('TEST1234')
+    expect(parseInviteCode('https://mockroom.app.space/join/TEST1234/')).toBe('TEST1234')
+    expect(parseInviteCode('')).toBeNull()
+    expect(parseInviteCode('   ')).toBeNull()
+  })
+
   it('generates cryptographically safe alphanumeric invite codes', () => {
     const code1 = generateInviteCode()
     const code2 = generateInviteCode()

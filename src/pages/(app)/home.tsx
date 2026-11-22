@@ -10,10 +10,16 @@ import {
   CheckCircle2,
   Users,
   ChevronRight,
+  LogIn,
 } from 'lucide-react'
 import { Button, Input, Textarea, Badge, useToast } from '@/components/ui'
 import type { RoomRecord } from '@/schemas/rooms-schema'
-import { LANGUAGE_STARTERS, generateInviteCode, type SupportedLanguage } from '@/lib/room-helpers'
+import {
+  LANGUAGE_STARTERS,
+  generateInviteCode,
+  parseInviteCode,
+  type SupportedLanguage,
+} from '@/lib/room-helpers'
 
 export default function HomePage() {
   const { isSignedIn, user } = useAuthProfileReady({ requireUser: true })
@@ -30,6 +36,7 @@ export default function HomePage() {
 
   // Room Creation Modal & Auth Modal State
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showJoinModal, setShowJoinModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [title, setTitle] = useState('')
   const [language, setLanguage] = useState<SupportedLanguage>('typescript')
@@ -37,12 +44,41 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
+  // Join Room Inputs
+  const [joinInput, setJoinInput] = useState('')
+  const [inlineInviteInput, setInlineInviteInput] = useState('')
+
   const handleOpenCreateModal = () => {
     if (!isSignedIn) {
       setShowAuthModal(true)
       return
     }
     setShowCreateModal(true)
+  }
+
+  const executeJoin = (rawInput: string) => {
+    const code = parseInviteCode(rawInput)
+    if (!code) {
+      toastError('Invalid Invite Code', 'Please enter a valid 8-character invite code or full join URL.')
+      return false
+    }
+    navigate(`/join/${code}`)
+    return true
+  }
+
+  const handleModalJoin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (executeJoin(joinInput)) {
+      setShowJoinModal(false)
+      setJoinInput('')
+    }
+  }
+
+  const handleInlineJoin = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (executeJoin(inlineInviteInput)) {
+      setInlineInviteInput('')
+    }
   }
 
   // Filter rooms by interviewer vs candidate
@@ -114,13 +150,23 @@ export default function HomePage() {
             Manage your technical interviews, live code sessions, and candidate scorecards.
           </p>
         </div>
-        <Button
-          onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-2 shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          {isSignedIn ? 'Create Interview Room' : 'Sign in to Create Room'}
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            onClick={() => setShowJoinModal(true)}
+            className="inline-flex items-center gap-2 shadow-sm"
+          >
+            <LogIn className="h-4 w-4" />
+            Join Room
+          </Button>
+          <Button
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center gap-2 shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            {isSignedIn ? 'Create Interview Room' : 'Sign in to Create Room'}
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -241,13 +287,36 @@ export default function HomePage() {
                 {candidateRooms.length}
               </Badge>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowJoinModal(true)}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Join with Code
+            </Button>
           </div>
 
           {candidateRooms.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                You haven't joined any interview rooms as a candidate yet. Use an invite link from an interviewer to enter.
+            <div className="rounded-xl border border-dashed border-border bg-card/40 p-8 text-center">
+              <Users className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
+              <h3 className="text-sm font-medium text-foreground">No joined interviews yet</h3>
+              <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+                Have an interview scheduled? Enter your 8-digit invite code or paste the full candidate link below:
               </p>
+              <form onSubmit={handleInlineJoin} className="mt-4 flex max-w-md mx-auto items-center gap-2">
+                <Input
+                  placeholder="Enter 8-digit code or paste invite link..."
+                  value={inlineInviteInput}
+                  onChange={(e) => setInlineInviteInput(e.target.value)}
+                  className="h-9 text-xs"
+                />
+                <Button type="submit" size="sm" className="h-9 shrink-0 gap-1.5 text-xs">
+                  <LogIn className="h-3.5 w-3.5" />
+                  Join Room
+                </Button>
+              </form>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -355,6 +424,72 @@ export default function HomePage() {
                 </Button>
                 <Button type="submit" disabled={isSubmitting || !title.trim()}>
                   {isSubmitting ? 'Creating...' : 'Create Room'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Join Room Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in-50 zoom-in-95">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2">
+                <LogIn className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Join Interview Room</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowJoinModal(false)
+                  setJoinInput('')
+                }}
+                className="text-muted-foreground hover:text-foreground text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleModalJoin} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Invite Code or URL *
+                </label>
+                <Input
+                  required
+                  autoFocus
+                  placeholder="e.g. 7X9K2M4P or https://mockroom.app.space/join/7X9K2M4P"
+                  value={joinInput}
+                  onChange={(e) => setJoinInput(e.target.value)}
+                />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Paste the full candidate invite link or enter the 8-character code.
+                </p>
+              </div>
+
+              {joinInput.trim() && (
+                <div className="rounded-lg bg-secondary/50 p-3 text-xs flex items-center justify-between">
+                  <span className="text-muted-foreground">Detected Code:</span>
+                  <span className="font-mono font-semibold text-foreground">
+                    {parseInviteCode(joinInput) || 'Invalid code format'}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowJoinModal(false)
+                    setJoinInput('')
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!joinInput.trim()}>
+                  Join Room
                 </Button>
               </div>
             </form>
