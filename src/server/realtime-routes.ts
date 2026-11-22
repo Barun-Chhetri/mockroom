@@ -3,14 +3,15 @@
  *
  * Caller identity in query parameters and headers is never trusted. Routes
  * scrub it and forward verified JWT identity in internal-only headers; the
- * documents-aware Yjs route additionally resolves an application role from
- * the documents collection.
+ * rooms-aware Yjs route additionally resolves an application role from
+ * the rooms collection.
  */
 
 import type { Context, Hono } from 'hono'
 import { authenticatedRoomRequest, resolveAppRole, verifyJwt } from 'deepspace/worker'
 import type { JwtVerifierConfig, VerifyResult } from 'deepspace/worker'
 import type { AppContext, Env } from '../../worker.js'
+import type { RoomRecord } from '../schemas/rooms-schema.js'
 
 function jwtConfig(env: Env): JwtVerifierConfig {
   return { publicKey: env.AUTH_JWT_PUBLIC_KEY, issuer: env.AUTH_JWT_ISSUER }
@@ -43,30 +44,9 @@ function wsRoute(
   }
 }
 
-type DocsYjsRole = 'admin' | 'member' | 'viewer'
+type YjsRole = 'admin' | 'member' | 'viewer'
 
-interface DocumentRecordForAccess {
-  ownerId?: string
-  collaborators?: string
-  editors?: string
-}
-
-type DocumentAccessLookup =
-  | { kind: 'found'; doc: DocumentRecordForAccess }
-  | { kind: 'not-docs-room' }
-  | { kind: 'error' }
-
-function parseAccessList(raw: string | undefined): string[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-async function getDocumentForAccess(env: Env, docId: string): Promise<DocumentAccessLookup> {
+async function getRoomForAccess(env: Env, roomId: string): Promise<RoomRecord | null> {
   const stub = env.RECORD_ROOMS.get(env.RECORD_ROOMS.idFromName(`app:${env.DEEPSPACE_APP_ID}`))
   try {
     const res = await stub.fetch(
@@ -79,45 +59,57 @@ async function getDocumentForAccess(env: Env, docId: string): Promise<DocumentAc
         },
         body: JSON.stringify({
           tool: 'records.get',
-          params: { collection: 'documents', recordId: docId },
+          params: { collection: 'rooms', recordId: roomId },
         }),
       }),
     )
     const json = (await res.json()) as {
       success?: boolean
-      error?: string
-      data?: { record?: { data?: DocumentRecordForAccess } }
+      data?: { record?: { data?: RoomRecord } }
     }
     if (json.success && json.data?.record?.data) {
-      return { kind: 'found', doc: json.data.record.data }
+      return json.data.record.data
     }
-    if (json.error?.startsWith('Schema not registered for collection: documents')) {
-      return { kind: 'not-docs-room' }
-    }
-    return { kind: 'error' }
+    return null
   } catch {
-    return { kind: 'error' }
+    return null
   }
 }
 
-async function resolveDocsYjsRole(
+async function resolveYjsRole(
   env: Env,
   docId: string,
   userId: string,
-): Promise<DocsYjsRole | null> {
-  const lookup = await getDocumentForAccess(env, docId)
-  if (lookup.kind === 'not-docs-room') return 'member'
-  if (lookup.kind === 'error') return null
-  const { doc } = lookup
-  if (doc.ownerId === userId || userId === env.OWNER_USER_ID) return 'admin'
+): Promise<YjsRole | null> {
+  // First check if this docId maps to an interview room
+  const room = await getRoomForAccess(env, docId)
+  if (room) {
+    // Interviewer or platform owner is admin
+    if (room.interviewerId === userId || userId === env.OWNER_USER_ID) {
+      return 'admin'
+    }
 
-  const editors = parseAccessList(doc.editors)
-  if (editors.includes(userId)) return 'member'
+    // Candidate role: editable when waiting or active, strictly read-only (viewer) when completed
+    if (room.candidateId === userId) {
+      return room.status === 'completed' ? 'viewer' : 'member'
+    }
 
-  const collaborators = parseAccessList(doc.collaborators)
-  if (collaborators.includes(userId)) return 'viewer'
+    // Check collaborators list
+    let collaborators: string[] = []
+    try {
+      collaborators = JSON.parse(String(room.collaborators || '[]'))
+    } catch {
+      collaborators = []
+    }
+    if (collaborators.includes(userId)) {
+      return room.status === 'completed' ? 'viewer' : 'member'
+    }
 
-  return null
+    return null
+  }
+
+  // Fallback for default documents
+  return 'member'
 }
 
 export function registerRealtimeRoutes(app: Hono<AppContext>): void {
@@ -133,7 +125,7 @@ export function registerRealtimeRoutes(app: Hono<AppContext>): void {
     const auth = token ? (await verifyJwt(jwtConfig(c.env), token)).result : null
     if (!auth) return new Response('Unauthorized', { status: 401 })
 
-    const role = await resolveDocsYjsRole(c.env, docId, auth.userId)
+    const role = await resolveYjsRole(c.env, docId, auth.userId)
     if (!role) return new Response('Forbidden', { status: 403 })
 
     const roomRequest = authenticatedRoomRequest(c.req.raw, auth, { role })
@@ -159,8 +151,6 @@ export function registerRealtimeRoutes(app: Hono<AppContext>): void {
     '/ws/cron/:roomId',
     wsRoute(
       (env) => env.CRON_ROOMS,
-      // Authenticated users get their current app role. Anonymous connections
-      // have no role and CronRoom enforces them as read-only viewers.
       async (auth, env) => ({ role: await resolveAppRole(env, auth.userId) }),
     ),
   )
