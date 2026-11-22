@@ -158,11 +158,14 @@ function synthesizeLocalFallback(system: string, userPrompt: string): string {
   return `### AI Candidate Scorecard Summary\n\n- **Technical Execution:** The candidate demonstrated strong understanding of the core problem and structured the solution with appropriate typing and conventions.\n- **Problem Solving:** Broke down the challenge methodically; considered standard input cases.\n- **Code Quality:** Clear naming conventions and modular organization.\n- **Hire Recommendation:** **Hire** — Recommended for next-round team alignment based on solid fundamentals.`
 }
 
-export function registerAiCopilotRoutes(app: Hono<AppContext>): void {
+export function registerAiCopilotRoutes(
+  app: Hono<AppContext>,
+  resolveAuthFn = resolveAuth,
+): void {
   // Route 1: Generate Hint
   app.post('/api/rooms/:id/ai/hint', async (c) => {
     const roomId = c.req.param('id')
-    const auth = await resolveAuth(c.req.raw, c.env)
+    const auth = await resolveAuthFn(c.req.raw, c.env)
     if (!auth) return c.json({ error: 'Unauthorized' }, 401)
 
     const authHeader = c.req.header('Authorization') ?? ''
@@ -193,7 +196,7 @@ export function registerAiCopilotRoutes(app: Hono<AppContext>): void {
   // Route 2: Generate Follow-up
   app.post('/api/rooms/:id/ai/follow-up', async (c) => {
     const roomId = c.req.param('id')
-    const auth = await resolveAuth(c.req.raw, c.env)
+    const auth = await resolveAuthFn(c.req.raw, c.env)
     if (!auth) return c.json({ error: 'Unauthorized' }, 401)
 
     const authHeader = c.req.header('Authorization') ?? ''
@@ -224,7 +227,7 @@ export function registerAiCopilotRoutes(app: Hono<AppContext>): void {
   // Route 3: Generate Scorecard
   app.post('/api/rooms/:id/ai/scorecard', async (c) => {
     const roomId = c.req.param('id')
-    const auth = await resolveAuth(c.req.raw, c.env)
+    const auth = await resolveAuthFn(c.req.raw, c.env)
     if (!auth) return c.json({ error: 'Unauthorized' }, 401)
 
     const authHeader = c.req.header('Authorization') ?? ''
